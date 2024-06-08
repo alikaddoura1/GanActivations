@@ -22,8 +22,10 @@ def build_generator():
     # vector of 1x100
     noise_shape = (100,)    
 
+    #sequential inherits class model
     model = Sequential()
 
+    # building generator layers
     model.add(Dense(256, input_shape=noise_shape))
     model.add(LeakyReLU(alpha=0.2))
     model.add(BatchNormalization(momentum=0.8))
@@ -40,6 +42,8 @@ def build_generator():
     model.summary()
 
     noise = Input(shape=noise_shape)
-    img = model(noise)    #Generated image
+    # image generated 
+    img = model(noise)    
 
+    # return model
     return Model(noise, img)
