@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-
 # mnist image shape is 28x28 pixels
 img_rows = 28
 img_cols = 28
@@ -39,7 +38,7 @@ def build_generator():
     model.add(Dense(np.prod(img_shape), activation='tanh'))
     model.add(Reshape(img_shape))
 
-    model.summary()
+    # model.summary()
 
     noise = Input(shape=noise_shape)
     # image generated 
@@ -47,3 +46,120 @@ def build_generator():
 
     # return model
     return Model(noise, img)
+
+
+# discriminator network
+def build_discriminator():
+    # sequential model
+    model = Sequential()
+
+    # make input generated image into 1 dimensional
+    model.add(Flatten(input_shape=img_shape))
+    model.add(Dense(512))
+    model.add(LeakyReLU(alpha=0.2))
+    model.add(Dense(256))
+    model.add(LeakyReLU(alpha=0.2))
+    model.add(Dense(1, activation='sigmoid'))
+    model.summary()
+
+    img = Input(shape=img_shape)
+    validity = model(img)
+
+    return Model(img, validity)
+
+
+def save_imgs(epoch):
+    row, col = 5, 5
+    noise = np.random.normal(0, 1, (row * col, 100))
+    gen_imgs = generator.predict(noise)
+
+    # Rescale images 0 - 1
+    gen_imgs = 0.5 * gen_imgs + 0.5
+
+    fig, axs = plt.subplots(row, col)
+    cnt = 0
+    for i in range(row):
+        for j in range(col):
+            axs[i,j].imshow(gen_imgs[cnt, :,:,0], cmap='gray')
+            axs[i,j].axis('off')
+            cnt += 1
+    fig.savefig("baseImages/mnist_%d.png" % epoch)
+    plt.close()
+
+
+def train(epochs, batch_size=128, save_interval=50):
+
+    #load data to train
+    (x_train,_), (_,_) = mnist.load_data()
+
+
+    x_train = (x_train.astype(np.float32) - 127.5)  / 127.5
+
+    x_train = np.expand_dims(x_train, axis=3)
+
+
+    half_batch = int(batch_size/2)
+
+
+    for epoch in range(epochs):
+
+        # train the discriminator
+        index = np.random.randint(0,x_train.shape[0], half_batch)
+        imgs = x_train[index]
+
+        noise = np.random.normal(0,1,(half_batch,100))
+
+        # now generate half batch of images
+        generated_imgs = generator.predict(noise)
+
+        #train discriminator on real and fake images seperately
+        d_loss_real = discriminator.train_on_batch(imgs,np.ones((half_batch, 1)))
+        d_loss_fake = discriminator.train_on_batch(generated_imgs, np.zeros((half_batch, 1)))
+
+        # average loss from real and fake images
+        d_loss =  0.5 * np.add(d_loss_real, d_loss_fake)
+
+
+        # now training my generator taking in random noise to generate images
+        noise = np.random.normal(0,1, (batch_size, 100))
+
+
+        valid_y = np.array([1] *batch_size)
+
+        g_loss = combined.train_on_batch(noise,valid_y)
+
+
+        print ("%d [D loss: %f, acc.: %.2f%%] [G loss: %f]" % (epoch, d_loss[0], 100*d_loss[1], g_loss))
+
+
+        if epoch % save_interval == 0:
+            save_imgs(epoch)
+
+
+
+optimizer = Adam(0.0002, 0.5)  
+
+# build discriminator and compile
+# using binary cross entropy 
+discriminator = build_discriminator()
+discriminator.compile(loss='binary_crossentropy',optimizer=optimizer,metrics=['accuracy'])
+
+
+generator = build_generator()
+generator.compile(loss='binary_crossentropy', optimizer=optimizer)
+
+# z is the random noise
+z = Input(shape=(100,))   
+img = generator(z)
+     
+discriminator.trainable = False  
+
+valid = discriminator(img)  #Validity check on the generated image
+
+combined = Model(z, valid)
+combined.compile(loss='binary_crossentropy', optimizer=optimizer)
+
+
+train(epochs=1000, batch_size=32, save_interval = 10)
+
+generator.save('models/base_generator_model.h5')
