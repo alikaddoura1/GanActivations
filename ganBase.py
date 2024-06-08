@@ -100,6 +100,9 @@ def train(epochs, batch_size=128, save_interval=50):
 
     half_batch = int(batch_size/2)
 
+    # lists to hold losses to plot them
+    d_losses = []
+    g_losses = []
 
     for epoch in range(epochs):
 
@@ -128,6 +131,9 @@ def train(epochs, batch_size=128, save_interval=50):
 
         g_loss = combined.train_on_batch(noise,valid_y)
 
+        d_losses.append(d_loss[0])
+        g_losses.append(g_loss)
+
 
         print ("%d [D loss: %f, acc.: %.2f%%] [G loss: %f]" % (epoch, d_loss[0], 100*d_loss[1], g_loss))
 
@@ -135,7 +141,19 @@ def train(epochs, batch_size=128, save_interval=50):
         if epoch % save_interval == 0:
             save_imgs(epoch)
 
+    return d_losses, g_losses
 
+def plot_losses(d_losses,g_losses):
+        plt.figure(figsize=(10, 5))
+        plt.plot(d_losses, label="Discriminator Loss")
+        plt.plot(g_losses, label="Generator Loss")
+        plt.title("Loss During Training")
+        plt.xlabel("Epoch")
+        plt.ylabel("Loss")
+        plt.legend()
+        plt.show()
+
+##########compiling and training gan
 
 optimizer = Adam(0.0002, 0.5)  
 
@@ -160,6 +178,7 @@ combined = Model(z, valid)
 combined.compile(loss='binary_crossentropy', optimizer=optimizer)
 
 
-train(epochs=1000, batch_size=32, save_interval = 10)
+d_losses, g_losses = train(epochs=1000, batch_size=32, save_interval = 10)
 
+plot_losses(d_losses,g_losses)
 generator.save('models/base_generator_model.h5')
