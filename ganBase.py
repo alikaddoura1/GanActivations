@@ -151,8 +151,8 @@ def plot_losses(d_losses,g_losses):
         plt.xlabel("Epoch")
         plt.ylabel("Loss")
         plt.legend()
-        plt.show()
         plt.savefig('LossPlots/baseplot.png')
+        plt.show()
         plt.close()
     
 
