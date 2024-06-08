@@ -152,6 +152,9 @@ def plot_losses(d_losses,g_losses):
         plt.ylabel("Loss")
         plt.legend()
         plt.show()
+        plt.savefig('LossPlots/baseplot.png')
+        plt.close()
+    
 
 ##########compiling and training gan
 
@@ -178,7 +181,7 @@ combined = Model(z, valid)
 combined.compile(loss='binary_crossentropy', optimizer=optimizer)
 
 
-d_losses, g_losses = train(epochs=1000, batch_size=32, save_interval = 10)
+d_losses, g_losses = train(epochs=100, batch_size=32, save_interval = 10)
 
 plot_losses(d_losses,g_losses)
 generator.save('models/base_generator_model.h5')
