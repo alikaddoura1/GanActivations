@@ -1,11 +1,17 @@
+# author: Ali Kaddoura
+
 from keras.datasets import mnist
 from keras.layers import Input, Dense, Reshape, Flatten
 from keras.layers import BatchNormalization
 from keras.layers import LeakyReLU
+from keras.applications.inception_v3 import InceptionV3, preprocess_input
 from keras.models import Sequential, Model
 from keras.optimizers import Adam
 import matplotlib.pyplot as plt
+from PIL import Image
 import numpy as np
+from scipy.stats import entropy
+
 
 
 # mnist image shape is 28x28 pixels
@@ -140,8 +146,17 @@ def train(epochs, batch_size=128, save_interval=50):
 
         if epoch % save_interval == 0:
             save_imgs(epoch)
+        
+        if epoch == epochs -1:
+            noise = np.random.normal(0, 1, (500, 100))  # Adjust number based on your GPU capacity
+            images = generator.predict(noise)
+            images = resize_images(images)
+            mean_is, std_is = inception_score(images)
+            print(f"Inception Score: {mean_is} ± {std_is}")
+    plot_losses(d_losses, g_losses)
+    generator.save('models/base_generator_model.h5')
 
-    return d_losses, g_losses
+    
 
 def plot_losses(d_losses,g_losses):
         plt.figure(figsize=(10, 5))
@@ -154,6 +169,40 @@ def plot_losses(d_losses,g_losses):
         plt.savefig('LossPlots/baseplot.png')
         plt.show()
         plt.close()
+
+def resize_images(imgs):
+    resized_imgs = []
+    for img in imgs:
+        # Rescale to [0, 255] and convert to RGB by repeating the grayscale image across three channels
+        img = ((img + 1.0) * 127.5).astype(np.uint8)
+        img_rgb = np.stack([img.squeeze()] * 3, axis=-1)
+        # Resize image to 299x299 using PIL
+        img_pil = Image.fromarray(img_rgb)
+        img_pil = img_pil.resize((299, 299), Image.BILINEAR)
+        resized_imgs.append(np.array(img_pil))
+    return np.array(resized_imgs)
+
+
+def inception_score(images, n_split=10, eps=1E-16):
+    # Load Inception model
+    model = InceptionV3(include_top=True)
+
+    # Manually preprocess the images
+    images = preprocess_input(images)  # This normalizes the image data to [-1, 1]
+
+    # Get model predictions
+    preds = model.predict(images)
+
+    # Calculate Inception Score
+    scores = []
+    n_part = len(preds) // n_split
+    for i in range(n_split):
+        part = preds[i * n_part:(i + 1) * n_part]
+        kl_div = part * (np.log(part + eps) - np.log(np.expand_dims(np.mean(part, axis=0), axis=0) + eps))
+        kl_div = np.mean(np.sum(kl_div, axis=1))
+        scores.append(np.exp(kl_div))
+
+    return np.mean(scores), np.std(scores)
     
 
 ##########  compiling and training gan  ####################
@@ -180,8 +229,4 @@ valid = discriminator(img)  #Validity check on the generated image
 combined = Model(z, valid)
 combined.compile(loss='binary_crossentropy', optimizer=optimizer)
 
-
-d_losses, g_losses = train(epochs=100, batch_size=32, save_interval = 10)
-
-plot_losses(d_losses,g_losses)
-generator.save('models/base_generator_model.h5')
+train(epochs=100, batch_size=32, save_interval = 100)
