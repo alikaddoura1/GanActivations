@@ -9,6 +9,7 @@ from keras.models import Sequential, Model
 from keras.optimizers import Adam
 import matplotlib.pyplot as plt
 from PIL import Image
+from scipy.linalg import sqrtm
 import numpy as np
 from scipy.stats import entropy
 
@@ -92,6 +93,27 @@ def save_imgs(epoch):
     fig.savefig("baseImages/mnist_%d.png" % epoch)
     plt.close()
 
+def calculate_fid(model, real_images, fake_images):
+    # calculate activations
+    act1 = model.predict(real_images)
+    act2 = model.predict(fake_images)
+
+    # calculate mean and covariance statistics
+    mu1, sigma1 = act1.mean(axis=0), np.cov(act1, rowvar=False)
+    mu2, sigma2 = act2.mean(axis=0), np.cov(act2, rowvar=False)
+
+    # calculate sum squared difference between means
+    ssdiff = np.sum((mu1 - mu2)**2.0)
+    # calculate sqrt of product between cov
+    covmean = sqrtm(sigma1.dot(sigma2))
+    # check and correct imaginary numbers from sqrt
+    if np.iscomplexobj(covmean):
+        covmean = covmean.real
+
+    # calculate score
+    fid = ssdiff + np.trace(sigma1 + sigma2 - 2.0 * covmean)
+    return fid
+
 
 def train(epochs, batch_size=128, save_interval=50):
 
@@ -109,8 +131,12 @@ def train(epochs, batch_size=128, save_interval=50):
     # lists to hold losses to plot them
     d_losses = []
     g_losses = []
+    fids = []
+
+    inception_model = InceptionV3(include_top=False, pooling='avg', input_shape=(299, 299, 3))
 
     for epoch in range(epochs):
+
 
         # train the discriminator
         index = np.random.randint(0,x_train.shape[0], half_batch)
@@ -120,6 +146,9 @@ def train(epochs, batch_size=128, save_interval=50):
 
         # now generate half batch of images
         generated_imgs = generator.predict(noise)
+
+        real_imgs_resized = resize_images((imgs + 1) * 127.5)
+        fake_imgs_resized = resize_images((generated_imgs + 1) * 127.5)
 
         #train discriminator on real and fake images seperately
         d_loss_real = discriminator.train_on_batch(imgs,np.ones((half_batch, 1)))
@@ -157,7 +186,6 @@ def train(epochs, batch_size=128, save_interval=50):
     generator.save('models/base_generator_model.h5')
 
     
-
 def plot_losses(d_losses,g_losses):
         plt.figure(figsize=(10, 5))
         plt.plot(d_losses, label="Discriminator Loss")
@@ -167,6 +195,18 @@ def plot_losses(d_losses,g_losses):
         plt.ylabel("Loss")
         plt.legend()
         plt.savefig('LossPlots/baseplot.png')
+        plt.show()
+        plt.close()
+
+
+def plot_fid(fids):
+        plt.figure(figsize=(10, 5))
+        plt.plot(fids, label="FID score")
+        plt.title("FID Score during training")
+        plt.xlabel("Epoch")
+        plt.ylabel("FID")
+        plt.legend()
+        plt.savefig('FIdPlots/baseplot.png')
         plt.show()
         plt.close()
 
