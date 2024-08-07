@@ -198,18 +198,6 @@ def plot_losses(d_losses,g_losses):
         plt.show()
         plt.close()
 
-
-def plot_fid(fids):
-        plt.figure(figsize=(10, 5))
-        plt.plot(fids, label="FID score")
-        plt.title("FID Score during training")
-        plt.xlabel("Epoch")
-        plt.ylabel("FID")
-        plt.legend()
-        plt.savefig('FIdPlots/baseplot.png')
-        plt.show()
-        plt.close()
-
 def resize_images(imgs):
     resized_imgs = []
     for img in imgs:
