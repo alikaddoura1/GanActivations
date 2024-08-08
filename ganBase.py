@@ -257,4 +257,4 @@ valid = discriminator(img)  #Validity check on the generated image
 combined = Model(z, valid)
 combined.compile(loss='binary_crossentropy', optimizer=optimizer)
 
-train(epochs=100, batch_size=32, save_interval = 100)
+train(epochs=30000, batch_size=32, save_interval = 100)

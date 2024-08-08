@@ -5,6 +5,7 @@ from keras.datasets import mnist
 from keras.layers import Input, Dense, Reshape, Flatten
 from keras.layers import BatchNormalization
 from keras.layers import LeakyReLU
+from keras.layers import ReLU
 from keras.applications.inception_v3 import InceptionV3, preprocess_input
 from keras.models import Sequential, Model
 from keras.optimizers import Adam
@@ -23,7 +24,7 @@ channels = 1
 img_shape = (img_rows, img_cols, channels)
 
 # generator neurel network
-def build_generator_relu():
+def build_generator():
     noise_shape = (100,)
     model = Sequential()
 
@@ -46,7 +47,7 @@ def build_generator_relu():
     return Model(noise, img)
 
 # discriminator network
-def build_discriminator_relu():
+def build_discriminator():
     model = Sequential()
 
     model.add(Flatten(input_shape=img_shape))
@@ -77,7 +78,7 @@ def save_imgs(epoch):
             axs[i,j].imshow(gen_imgs[cnt, :,:,0], cmap='gray')
             axs[i,j].axis('off')
             cnt += 1
-    fig.savefig("baseImages/mnist_%d.png" % epoch)
+    fig.savefig("reluImages/mnist_%d.png" % epoch)
     plt.close()
 
 def calculate_fid(model, real_images, fake_images):
@@ -170,7 +171,7 @@ def train(epochs, batch_size=128, save_interval=50):
             mean_is, std_is = inception_score(images)
             print(f"Inception Score: {mean_is} ± {std_is}")
     plot_losses(d_losses, g_losses)
-    generator.save('models/base_generator_model.h5')
+    generator.save('models/relu_generator_model.h5')
 
     
 def plot_losses(d_losses,g_losses):
@@ -181,7 +182,7 @@ def plot_losses(d_losses,g_losses):
         plt.xlabel("Epoch")
         plt.ylabel("Loss")
         plt.legend()
-        plt.savefig('LossPlots/baseplot.png')
+        plt.savefig('LossPlots/reluPlot.png')
         plt.show()
         plt.close()
 
@@ -193,7 +194,7 @@ def plot_fid(fids):
         plt.xlabel("Epoch")
         plt.ylabel("FID")
         plt.legend()
-        plt.savefig('FIdPlots/baseplot.png')
+        plt.savefig('FIdPlots/reluPlot.png')
         plt.show()
         plt.close()
 
@@ -256,4 +257,4 @@ valid = discriminator(img)  #Validity check on the generated image
 combined = Model(z, valid)
 combined.compile(loss='binary_crossentropy', optimizer=optimizer)
 
-train(epochs=100, batch_size=32, save_interval = 100)
+train(epochs=30000, batch_size=32, save_interval = 100)
