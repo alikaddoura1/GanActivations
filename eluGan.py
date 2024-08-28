@@ -25,7 +25,7 @@ channels = 1
 img_shape = (img_rows, img_cols, channels)
 
 # generator neurel network
-def build_generator):
+def build_generator():
     noise_shape = (100,)
     model = Sequential()
 
